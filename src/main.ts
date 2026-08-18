@@ -341,11 +341,24 @@ class EpicPenApp {
       this.isDraggingToolbar = false;
     });
 
+    // Clique na Toolbar Minimizada / Aba Lateral: Re-ativa o Modo Desenho e Expande!
+    this.toolbar.addEventListener('click', () => {
+      if (this.isCollapsed) {
+        this.toggleCollapse();
+      }
+      if (this.isPassThroughMode) {
+        this.setPassThroughMode(false);
+      }
+    });
+
     // Hover Expand/Collapse no Modo Gaveta Lateral Acoplada
     this.toolbar.addEventListener('mouseenter', () => {
       this.setIgnoreMouse(false);
       if (this.isDocked && this.isCollapsed) {
         this.toggleCollapse();
+        if (this.isPassThroughMode) {
+          this.setPassThroughMode(false);
+        }
       }
     });
 
@@ -359,7 +372,10 @@ class EpicPenApp {
     });
 
     // Recolher / Expandir Toolbar
-    this.toggleCollapseBtn.addEventListener('click', () => this.toggleCollapse());
+    this.toggleCollapseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCollapse();
+    });
 
     const rulerWidget = document.getElementById('rulerWidget');
     if (rulerWidget) {
@@ -387,7 +403,7 @@ class EpicPenApp {
     if (this.isDocked) {
       this.dockToEdge('right');
       if (!this.isCollapsed) this.toggleCollapse();
-      this.showToast('📌', 'Gaveta Lateral Acoplada! Passe o mouse na borda para expandir.');
+      this.showToast('📌', 'Gaveta Lateral Acoplada! Passe o mouse ou clique na borda para desenhar.');
     } else {
       this.toolbar.classList.remove('docked-right', 'docked-left');
       this.dockBtn.classList.remove('active');
