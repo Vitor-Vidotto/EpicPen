@@ -18,7 +18,7 @@ class EpicPenApp {
   private isPassThroughMode: boolean = false;
   private isCollapsed: boolean = false;
   private isDocked: boolean = false;
-  private isHoldDrawActive: boolean = false;
+  private isHoldModeActive: boolean = false;
   private boardState: 'transparent' | 'white' | 'black' = 'transparent';
 
   // Elementos da Interface
@@ -72,6 +72,12 @@ class EpicPenApp {
   private toastMessage: HTMLElement;
   private openFolderBtn: HTMLButtonElement;
   private toastTimeout: number | null = null;
+
+  // Mode HUD Banner
+  private modeHudElement: HTMLElement;
+  private modeHudIcon: HTMLElement;
+  private modeHudText: HTMLElement;
+  private modeHudTimeout: number | null = null;
 
   // Variáveis de arraste da toolbar
   private isDraggingToolbar: boolean = false;
@@ -140,6 +146,10 @@ class EpicPenApp {
     this.toastMessage = document.getElementById('toastMessage') as HTMLElement;
     this.openFolderBtn = document.getElementById('openFolderBtn') as HTMLButtonElement;
 
+    this.modeHudElement = document.getElementById('modeHud') as HTMLElement;
+    this.modeHudIcon = document.getElementById('modeHudIcon') as HTMLElement;
+    this.modeHudText = document.getElementById('modeHudText') as HTMLElement;
+
     this.initUIEvents();
     this.initHotkeys();
     this.initTauriGlobalEvents();
@@ -147,13 +157,12 @@ class EpicPenApp {
   }
 
   private initTauriGlobalEvents() {
-    // Escutar o evento global do Rust acionado por Ctrl+Alt+D em qualquer aplicativo do Windows
     listen('global-toggle-draw', () => {
       if (this.isCollapsed) {
         this.toggleCollapse();
       }
       this.setPassThroughMode(false);
-      this.showToast('✏️', 'Modo Desenho Reativado via Atalho Global (Ctrl+Alt+D)!');
+      this.showModeHud('MODO DESENHO', '✏️', 'Ativado via Atalho Global Ctrl+Alt+D');
     }).catch(err => {
       console.warn('Erro ao escutar evento global do Tauri:', err);
     });
@@ -435,7 +444,7 @@ class EpicPenApp {
     if (this.isDocked) {
       this.dockToEdge('right');
       if (!this.isCollapsed) this.toggleCollapse();
-      this.showToast('📌', 'Gaveta Lateral Acoplada! Passe o mouse ou use Ctrl+Alt+D para desenhar.');
+      this.showToast('📌', 'Gaveta Lateral Acoplada!');
     } else {
       this.toolbar.classList.remove('docked-right', 'docked-left');
       this.dockBtn.classList.remove('active');
@@ -482,18 +491,39 @@ class EpicPenApp {
     }
   }
 
-  private setPassThroughMode(passThrough: boolean) {
+  private setPassThroughMode(passThrough: boolean, showBanner: boolean = true) {
     this.isPassThroughMode = passThrough;
     if (passThrough) {
       this.modeInteractBtn.classList.add('active');
       this.modeDrawBtn.classList.remove('active');
-      this.showToast('👆', 'Modo Interativo Ativado! Pressione Ctrl+Alt+D para voltar a desenhar.');
+      if (showBanner) {
+        this.showModeHud('MODO INTERATIVO (Clicando atrás)', '👆', 'Segure Ctrl ou Espaço para rabiscar na hora');
+      }
     } else {
       this.modeDrawBtn.classList.add('active');
       this.modeInteractBtn.classList.remove('active');
-      this.showToast('✏️', 'Modo Desenho Ativado!');
+      if (showBanner) {
+        this.showModeHud('MODO DESENHO (Rabiscando)', '✏️', 'Segure Ctrl ou Espaço para clicar no app atrás');
+      }
     }
     this.updatePassThroughState();
+  }
+
+  private showModeHud(text: string, icon: string, subText: string = '') {
+    if (this.modeHudTimeout) clearTimeout(this.modeHudTimeout);
+    this.modeHudIcon.innerText = icon;
+    this.modeHudText.innerText = text;
+
+    const subElement = this.modeHudElement.querySelector('.mode-hud-sub') as HTMLElement;
+    if (subElement) {
+      subElement.innerText = subText || 'Segure Ctrl ou Espaço para alternar temporariamente';
+    }
+
+    this.modeHudElement.classList.remove('hidden');
+
+    this.modeHudTimeout = window.setTimeout(() => {
+      this.modeHudElement.classList.add('hidden');
+    }, 1200);
   }
 
   private setBoardMode(mode: 'transparent' | 'white' | 'black') {
@@ -539,16 +569,17 @@ class EpicPenApp {
   }
 
   private initHotkeys() {
-    // Evento de Tecla Pressionada (Hold-to-Draw com Ctrl ou Espaço)
+    // Tecla Mestra Hold-To-Toggle (Segurar Ctrl, Alt ou Espaço para alternar temporariamente em ambas as direções!)
     window.addEventListener('keydown', (e) => {
       if (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') {
         return;
       }
 
-      // Suporte a Hold-to-Draw (Segurar Ctrl ou Espaço no modo interativo)
-      if ((e.key === 'Control' || e.key === ' ') && this.isPassThroughMode && !this.isHoldDrawActive) {
-        this.isHoldDrawActive = true;
-        this.setPassThroughMode(false);
+      // Suporte Bidirecional a Hold-to-Interact & Hold-to-Draw
+      if ((e.key === 'Control' || e.key === ' ' || e.key === 'Alt') && !this.isHoldModeActive) {
+        this.isHoldModeActive = true;
+        // Inverter modo atual temporariamente!
+        this.setPassThroughMode(!this.isPassThroughMode, false);
         return;
       }
 
@@ -597,11 +628,12 @@ class EpicPenApp {
       }
     });
 
-    // Soltar Tecla para Hold-to-Draw
+    // Soltar Tecla Mestra para Reverter o Modo Original
     window.addEventListener('keyup', (e) => {
-      if ((e.key === 'Control' || e.key === ' ') && this.isHoldDrawActive) {
-        this.isHoldDrawActive = false;
-        this.setPassThroughMode(true);
+      if ((e.key === 'Control' || e.key === ' ' || e.key === 'Alt') && this.isHoldModeActive) {
+        this.isHoldModeActive = false;
+        // Reverter ao modo original!
+        this.setPassThroughMode(!this.isPassThroughMode, false);
       }
     });
   }

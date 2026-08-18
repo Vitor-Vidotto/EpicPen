@@ -10,6 +10,13 @@
   <!-- Fundo do Quadro (Branco / Negro / Transparente) -->
   <div id="boardOverlay" class="board-transparent"></div>
 
+  <!-- HUD Banner Flutuante no Centro da Tela ao Alternar Modo -->
+  <div id="modeHud" class="mode-hud hidden">
+    <span id="modeHudIcon">✏️</span>
+    <span id="modeHudText">MODO DESENHO</span>
+    <span class="mode-hud-sub">Segure Ctrl ou Espaço para alternar temporariamente</span>
+  </div>
+
   <!-- Canvas de Desenho em Tela Cheia -->
   <canvas id="drawCanvas"></canvas>
 
@@ -142,11 +149,11 @@
     <div id="toolbarContent" class="toolbar-content">
       <!-- Seletor de Modo (Desenhar / Interagir) -->
       <div class="mode-toggle-group">
-        <button id="modeDrawBtn" class="mode-btn active" title="Modo Desenho (Alt+D) - Ou segure Ctrl / Espaço no modo interativo!">
+        <button id="modeDrawBtn" class="mode-btn active" title="Modo Desenho (Alt+D) - Rabisque na tela!">
           <span class="btn-icon">✏️</span>
           <span class="btn-label">Desenhar</span>
         </button>
-        <button id="modeInteractBtn" class="mode-btn" title="Modo Interativo (Alt+D) - Clique na tela atrás!">
+        <button id="modeInteractBtn" class="mode-btn" title="Modo Interativo (Alt+D) - Clique nos apps atrás!">
           <span class="btn-icon">👆</span>
           <span class="btn-label">Interagir</span>
         </button>
