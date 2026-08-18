@@ -158,6 +158,7 @@ class EpicPenApp {
 
   private initTauriGlobalEvents() {
     listen('global-toggle-draw', () => {
+      this.isHoldModeActive = false;
       if (this.isCollapsed) {
         this.toggleCollapse();
       }
@@ -569,22 +570,26 @@ class EpicPenApp {
   }
 
   private initHotkeys() {
-    // Tecla Mestra Hold-To-Toggle (Segurar Ctrl, Alt ou Espaço para alternar temporariamente em ambas as direções!)
+    // Tecla Mestra Hold-To-Toggle (Segurar APENAS Ctrl ou Espaço para alternar temporariamente!)
     window.addEventListener('keydown', (e) => {
       if (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') {
         return;
       }
 
-      // Suporte Bidirecional a Hold-to-Interact & Hold-to-Draw
-      if ((e.key === 'Control' || e.key === ' ' || e.key === 'Alt') && !this.isHoldModeActive) {
+      // Suporte Bidirecional a Hold-to-Interact & Hold-to-Draw (APENAS Ctrl ou Espaço para não conflitar com Alt+D!)
+      if ((e.key === 'Control' || e.key === ' ') && !this.isHoldModeActive) {
         this.isHoldModeActive = true;
-        // Inverter modo atual temporariamente!
         this.setPassThroughMode(!this.isPassThroughMode, false);
         return;
       }
 
       const hotkeys: HotkeyConfig = this.settings.getHotkeys();
       const pressedCombo = this.getPressedCombo(e);
+
+      // Limpar estado de hold se uma combinação de teclas de atalho foi pressionada
+      if (pressedCombo.length > 0) {
+        this.isHoldModeActive = false;
+      }
 
       if (pressedCombo === hotkeys.drawMode.toUpperCase()) {
         e.preventDefault();
@@ -630,7 +635,7 @@ class EpicPenApp {
 
     // Soltar Tecla Mestra para Reverter o Modo Original
     window.addEventListener('keyup', (e) => {
-      if ((e.key === 'Control' || e.key === ' ' || e.key === 'Alt') && this.isHoldModeActive) {
+      if ((e.key === 'Control' || e.key === ' ') && this.isHoldModeActive) {
         this.isHoldModeActive = false;
         // Reverter ao modo original!
         this.setPassThroughMode(!this.isPassThroughMode, false);
