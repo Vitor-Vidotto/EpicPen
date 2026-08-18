@@ -1,0 +1,22 @@
+[package]
+name = "epic-pen-redo"
+version = "0.1.0"
+description = "EpicPenRedo Screen Drawing App"
+authors = ["Dev"]
+edition = "2021"
+
+[lib]
+name = "epic_pen_redo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["image-png", "tray-icon"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+arboard = "3"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png"] }

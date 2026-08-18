@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EpicPenRedo</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <!-- Fundo do Quadro (Branco / Negro / Transparente) -->
+  <div id="boardOverlay" class="board-transparent"></div>
+
+  <!-- Canvas de Desenho em Tela Cheia -->
+  <canvas id="drawCanvas"></canvas>
+
+  <!-- Régua Interativa com Rotação Livre e Redimensionamento Lateral com Mouse -->
+  <div id="rulerWidget" class="ruler-container hidden">
+    <div class="ruler-header" id="rulerHeader">
+      <span class="ruler-title" id="rulerTitle">📏 Régua (450px)</span>
+      <div class="ruler-controls">
+        <button id="rulerRotateBtn" title="Clique para 45° ou rode com o Scroll do Mouse / Alça de Rotação">🔄 <span id="rulerAngleText">0°</span></button>
+        <button id="rulerCloseBtn" title="Fechar Régua">✖</button>
+      </div>
+    </div>
+    <div class="ruler-body" id="rulerBody">
+      <div class="ruler-ticks" id="rulerTicks"></div>
+      <div class="ruler-guide-line"></div>
+      <div id="rulerRotateHandle" class="ruler-rotate-handle" title="Arraste para rotacionar a régua em qualquer ângulo">⟳ Rotacionar</div>
+      <div id="rulerResizeHandle" class="ruler-resize-handle" title="Arraste a borda lateral para puxar e esticar a régua">
+        <div class="resize-grip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicador de Gravação de Miniaula / GIF -->
+  <div id="recordingBadge" class="recording-badge hidden">
+    <span class="rec-dot">●</span>
+    <span id="recordingTimer">Gravando 00:00 🎙️</span>
+    <button id="stopRecBtn" class="stop-rec-btn" title="Parar e Salvar Gravação">■ Salvar</button>
+  </div>
+
+  <!-- Caixa de Texto Flutuante Dinâmica -->
+  <div id="textOverlay" class="text-overlay hidden">
+    <div class="text-box-header">
+      <span class="text-box-title">🔤 Inserir Texto</span>
+      <div class="text-box-actions">
+        <button id="textCommitBtn" class="text-btn commit" title="Confirmar (Ctrl+Enter ou Clicar fora)">✓ Confirmar</button>
+        <button id="textCancelBtn" class="text-btn cancel" title="Cancelar (Esc)">✖</button>
+      </div>
+    </div>
+    <textarea id="textInput" placeholder="Digite seu texto aqui... (Shift+Enter para nova linha)"></textarea>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">
+    <span id="toastIcon">✨</span>
+    <span id="toastMessage">Notificação</span>
+    <button id="openFolderBtn" class="toast-btn hidden" title="Abrir pasta de capturas no Explorer">📁 Abrir Pasta</button>
+  </div>
+
+  <!-- Modal de Configurações & Customização de Atalhos -->
+  <div id="settingsModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ Configurações & Atalhos de Teclado</h3>
+        <button id="settingsCloseBtn" class="modal-close-btn">✖</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">Personalize as combinações de teclas para cada ferramenta:</p>
+
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label for="hk_drawMode">Modo Desenho / Interativo</label>
+            <input type="text" id="hk_drawMode" value="Alt+D" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_clearCanvas">Limpar Tela</label>
+            <input type="text" id="hk_clearCanvas" value="Alt+C" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_toggleRuler">Régua Interativa</label>
+            <input type="text" id="hk_toggleRuler" value="Alt+R" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_takeScreenshot">Print Screen Tela Cheia</label>
+            <input type="text" id="hk_takeScreenshot" value="Alt+S" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_recordGif">Gravar Miniaula / GIF</label>
+            <input type="text" id="hk_recordGif" value="Alt+G" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_toggleSpotlight">Holofote (Spotlight)</label>
+            <input type="text" id="hk_toggleSpotlight" value="Alt+L" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_toggleMagnifier">Lupa de Tela</label>
+            <input type="text" id="hk_toggleMagnifier" value="Alt+M" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_toggleBoard">Fundo Quadro Negro/Branco</label>
+            <input type="text" id="hk_toggleBoard" value="Alt+B" />
+          </div>
+          <div class="setting-item">
+            <label for="hk_toggleCollapse">Minimizar Toolbar</label>
+            <input type="text" id="hk_toggleCollapse" value="Alt+H" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="settingsResetBtn" class="modal-btn secondary">Restaurar Padrões</button>
+        <button id="settingsSaveBtn" class="modal-btn primary">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de Ferramentas Flutuante & Docking Drawer -->
+  <div id="toolbar" class="toolbar-container docked-right">
+    <!-- Handle de Arraste & Cabeçalho -->
+    <div id="toolbarHeader" class="toolbar-header" title="Arraste para mover ou acoplar nas bordas">
+      <div class="drag-handle">⋮⋮</div>
+      <div class="logo-wrapper">
+        <span class="app-logo">🖊️ EpicPen</span>
+        <div class="app-logo-vertical hidden">
+          <span class="v-icon">🖊️</span>
+          <span class="v-letter">E</span>
+          <span class="v-letter">P</span>
+          <span class="v-letter">I</span>
+          <span class="v-letter">C</span>
+          <span class="v-letter">P</span>
+          <span class="v-letter">E</span>
+          <span class="v-letter">N</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="dockBtn" class="icon-btn-sm active" title="Acoplar na Borda Lateral (Gaveta Retrátil)">📌</button>
+        <button id="settingsOpenBtn" class="icon-btn-sm" title="Configurações (Atalhos)">⚙️</button>
+        <button id="toggleCollapseBtn" class="icon-btn-sm" title="Minimizar (Alt+H)">−</button>
+      </div>
+    </div>
+
+    <div id="toolbarContent" class="toolbar-content">
+      <!-- Seletor de Modo (Desenhar / Interagir) -->
+      <div class="mode-toggle-group">
+        <button id="modeDrawBtn" class="mode-btn active" title="Modo Desenho (Alt+D) - Ou segure Ctrl / Espaço no modo interativo!">
+          <span class="btn-icon">✏️</span>
+          <span class="btn-label">Desenhar</span>
+        </button>
+        <button id="modeInteractBtn" class="mode-btn" title="Modo Interativo (Alt+D) - Clique na tela atrás!">
+          <span class="btn-icon">👆</span>
+          <span class="btn-label">Interagir</span>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Ferramentas Principais -->
+      <div class="tools-grid">
+        <button id="toolPen" class="tool-btn active" title="Caneta Livre">
+          <span class="tool-icon">🖊️</span>
+        </button>
+
+        <button id="toolHighlighter" class="tool-btn" title="Marca-Texto">
+          <span class="tool-icon">🖍️</span>
+        </button>
+
+        <button id="toolLaser" class="tool-btn" title="Apontador Laser Contínuo">
+          <span class="tool-icon">🔴</span>
+        </button>
+
+        <button id="toolBadge" class="tool-btn" title="Carimbo Numerado Sequencial (1, 2, 3...)">
+          <span class="tool-icon">①</span>
+          <span id="badgeCountText" class="badge-count-pill">1</span>
+        </button>
+
+        <button id="toolSpotlight" class="tool-btn" title="Holofote / Spotlight Focus (Alt+L)">
+          <span class="tool-icon">💡</span>
+        </button>
+
+        <button id="toolMagnifier" class="tool-btn" title="Lupa de Tela 2x/3x (Alt+M)">
+          <span class="tool-icon">🔍</span>
+        </button>
+
+        <button id="toolRuler" class="tool-btn" title="Régua com Guia Magnética (Alt+R)">
+          <span class="tool-icon">📏</span>
+        </button>
+
+        <button id="toolText" class="tool-btn" title="Inserir Texto">
+          <span class="tool-icon">🔤</span>
+        </button>
+
+        <button id="toolEraser" class="tool-btn" title="Borracha">
+          <span class="tool-icon">🧹</span>
+        </button>
+      </div>
+
+      <!-- Submenu do Holofote (Ajustes de Opacidade e Raio) -->
+      <div id="spotlightControls" class="sub-controls hidden">
+        <div class="sub-control-item">
+          <span>Escurecimento:</span>
+          <input type="range" id="spotlightOpacitySlider" min="30" max="95" value="75" />
+          <span id="spotlightOpacityVal">75%</span>
+        </div>
+        <div class="sub-control-item">
+          <span>Tamanho Holofote:</span>
+          <input type="range" id="spotlightRadiusSlider" min="100" max="400" value="200" />
+          <span id="spotlightRadiusVal">200px</span>
+        </div>
+      </div>
+
+      <!-- Reset do Carimbo Numerado -->
+      <div id="badgeControls" class="sub-controls hidden">
+        <button id="badgeResetBtn" class="tool-btn-wide" title="Zerar a contagem dos carimbos numerados para 1">
+          🔄 Zerar Contagem dos Carimbos (1)
+        </button>
+      </div>
+
+      <!-- Dropdown de Formas Geométricas -->
+      <div class="shapes-container">
+        <button id="shapesBtn" class="tool-btn-wide" title="Formas Geométricas">
+          <span id="currentShapeIcon">↗️</span>
+          <span class="tool-text">Formas</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <div id="shapesDropdown" class="shapes-dropdown hidden">
+          <button data-shape="arrow" class="shape-opt active">↗️ Seta</button>
+          <button data-shape="line" class="shape-opt">── Linha</button>
+          <button data-shape="rect" class="shape-opt">▭ Retângulo</button>
+          <button data-shape="circle" class="shape-opt">◯ Círculo</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Paleta de Cores Swatches -->
+      <div class="colors-wrapper">
+        <div class="color-swatches">
+          <button class="color-swatch active" data-color="#FFDE59" style="background-color: #FFDE59;" title="Amarelo Neon"></button>
+          <button class="color-swatch" data-color="#FF3131" style="background-color: #FF3131;" title="Vermelho"></button>
+          <button class="color-swatch" data-color="#00F0FF" style="background-color: #00F0FF;" title="Ciano"></button>
+          <button class="color-swatch" data-color="#00FF66" style="background-color: #00FF66;" title="Verde Neon"></button>
+          <button class="color-swatch" data-color="#B55FE6" style="background-color: #B55FE6;" title="Roxo"></button>
+          <button class="color-swatch" data-color="#FFFFFF" style="background-color: #FFFFFF;" title="Branco"></button>
+          <button class="color-swatch" data-color="#1E1E2E" style="background-color: #1E1E2E;" title="Cinza Escuro"></button>
+          <label class="color-picker-label" title="Cor Customizada">
+            🎨
+            <input type="color" id="customColorPicker" value="#FFDE59" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Controle de Espessura -->
+      <div class="size-wrapper">
+        <span class="size-label">Tamanho:</span>
+        <div class="size-presets">
+          <button class="size-btn" data-size="3" title="Fina (3px)">•</button>
+          <button class="size-btn active" data-size="7" title="Média (7px)">●</button>
+          <button class="size-btn" data-size="14" title="Grossa (14px)">⬤</button>
+          <button class="size-btn" data-size="28" title="Extra Grossa (28px)"><span class="big-dot">⬤</span></button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Modo Quadro (Whiteboard / Blackboard) -->
+      <div class="board-toggle-group">
+        <button id="boardTransparentBtn" class="board-btn active" title="Tela Transparente (Alt+B)">🔲 Tela</button>
+        <button id="boardWhiteBtn" class="board-btn" title="Quadro Branco (Alt+B)">⬜ Branco</button>
+        <button id="boardBlackBtn" class="board-btn" title="Quadro Negro (Alt+B)">⬛ Negro</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Ações (Undo, Redo, Clear, Print, Crop, GIF + Mic, Open Folder) -->
+      <div class="actions-grid">
+        <button id="btnUndo" class="action-btn" title="Desfazer (Ctrl+Z)">↩️</button>
+        <button id="btnRedo" class="action-btn" title="Refazer (Ctrl+Y)">↪️</button>
+        <button id="btnClear" class="action-btn danger" title="Limpar Tela (Alt+C)">🗑️</button>
+        <button id="btnScreenshot" class="action-btn feature" title="Print Tela Cheia (Alt+S)">📸 Print</button>
+        <button id="btnCropPrint" class="action-btn feature" title="Recorte Selecionado (Print de Área)">✂️ Crop</button>
+        <button id="btnRecordGif" class="action-btn feature-gif" title="Gravar Miniaula / GIF (Alt+G)">🎬 Vídeo</button>
+      </div>
+
+      <div class="mic-toggle-row">
+        <label class="mic-toggle-label" title="Ativar/Desativar gravação de voz com o microfone">
+          <input type="checkbox" id="micToggleCheckbox" checked />
+          <span class="mic-icon">🎙️</span>
+          <span>Gravar Microfone</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
