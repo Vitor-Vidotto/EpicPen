@@ -31,8 +31,10 @@ html, body {
   padding: 0 !important;
   overflow: hidden !important;
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
   outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Fundo do Quadro */
@@ -145,6 +147,11 @@ html, body {
   width: 180px;
 }
 
+.toolbar-container.collapsed .toolbar-header {
+  border-bottom: none !important;
+  border-radius: var(--radius-lg) !important;
+}
+
 .toolbar-container.collapsed .toolbar-content {
   display: none;
 }
@@ -174,6 +181,7 @@ html, body {
   gap: 8px !important;
   border-bottom: none !important;
   background: transparent !important;
+  border-radius: 14px 0 0 14px !important;
 }
 
 .toolbar-container.docked-right.collapsed .drag-handle,
