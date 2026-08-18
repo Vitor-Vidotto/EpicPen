@@ -316,6 +316,23 @@ class EpicPenApp {
     });
 
     window.addEventListener('mousemove', (e) => {
+      // Detecção dinâmica de mouse sobre a aba da gaveta lateral mesmo durante o modo pass-through!
+      if (this.isPassThroughMode) {
+        const toolbarRect = this.toolbar.getBoundingClientRect();
+        const isOverToolbar = (
+          e.clientX >= toolbarRect.left - 10 &&
+          e.clientX <= toolbarRect.right + 10 &&
+          e.clientY >= toolbarRect.top - 10 &&
+          e.clientY <= toolbarRect.bottom + 10
+        ) || (this.isDocked && e.clientX >= window.innerWidth - 50);
+
+        if (isOverToolbar) {
+          this.setIgnoreMouse(false);
+        } else {
+          this.setIgnoreMouse(true);
+        }
+      }
+
       if (!this.isDraggingToolbar) return;
       let x = e.clientX - this.dragStartX;
       let y = e.clientY - this.dragStartY;
