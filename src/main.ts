@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { DrawingCanvas, ToolType, ShapeType } from './canvas';
 import { RulerTool } from './ruler';
 import { MediaRecorderTool } from './recorder';
@@ -141,7 +142,21 @@ class EpicPenApp {
 
     this.initUIEvents();
     this.initHotkeys();
+    this.initTauriGlobalEvents();
     this.updatePassThroughState();
+  }
+
+  private initTauriGlobalEvents() {
+    // Escutar o evento global do Rust acionado por Ctrl+Alt+D em qualquer aplicativo do Windows
+    listen('global-toggle-draw', () => {
+      if (this.isCollapsed) {
+        this.toggleCollapse();
+      }
+      this.setPassThroughMode(false);
+      this.showToast('✏️', 'Modo Desenho Reativado via Atalho Global (Ctrl+Alt+D)!');
+    }).catch(err => {
+      console.warn('Erro ao escutar evento global do Tauri:', err);
+    });
   }
 
   private initUIEvents() {
@@ -420,7 +435,7 @@ class EpicPenApp {
     if (this.isDocked) {
       this.dockToEdge('right');
       if (!this.isCollapsed) this.toggleCollapse();
-      this.showToast('📌', 'Gaveta Lateral Acoplada! Passe o mouse ou clique na borda para desenhar.');
+      this.showToast('📌', 'Gaveta Lateral Acoplada! Passe o mouse ou use Ctrl+Alt+D para desenhar.');
     } else {
       this.toolbar.classList.remove('docked-right', 'docked-left');
       this.dockBtn.classList.remove('active');
@@ -472,7 +487,7 @@ class EpicPenApp {
     if (passThrough) {
       this.modeInteractBtn.classList.add('active');
       this.modeDrawBtn.classList.remove('active');
-      this.showToast('👆', 'Modo Interativo Ativado! Clique no aplicativo atrás.');
+      this.showToast('👆', 'Modo Interativo Ativado! Pressione Ctrl+Alt+D para voltar a desenhar.');
     } else {
       this.modeDrawBtn.classList.add('active');
       this.modeInteractBtn.classList.remove('active');

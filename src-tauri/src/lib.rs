@@ -7,8 +7,9 @@ use std::process::Command;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 #[tauri::command]
 fn set_ignore_cursor_events(window: tauri::Window, ignore: bool) -> Result<(), String> {
@@ -97,12 +98,31 @@ fn open_captures_folder() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        if shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyD) {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = window.emit("global-toggle-draw", ());
+                            }
+                        }
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_decorations(false);
                 let _ = window.set_shadow(false);
                 let _ = window.set_title("");
             }
+
+            // Registrar atalho global Ctrl+Alt+D no sistema operacional
+            let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyD);
+            let _ = app.global_shortcut().register(shortcut);
 
             let toggle_i = MenuItem::with_id(app, "toggle", "✏️ Mostrar / Ocultar EpicPen", true, None::<&str>)?;
             let open_i = MenuItem::with_id(app, "open_captures", "📁 Pasta de Capturas", true, None::<&str>)?;
@@ -120,6 +140,7 @@ pub fn run() {
                             } else {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+                                let _ = window.emit("global-toggle-draw", ());
                             }
                         }
                     }
@@ -145,6 +166,7 @@ pub fn run() {
                             } else {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+                                let _ = window.emit("global-toggle-draw", ());
                             }
                         }
                     }
