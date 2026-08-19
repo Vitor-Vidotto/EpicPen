@@ -6,6 +6,8 @@ import { MediaRecorderTool } from './recorder';
 import { SpotlightEngine } from './spotlight';
 import { MagnifierLens } from './magnifier';
 import { SettingsManager, HotkeyConfig } from './settings';
+import { PieMenu } from './pieMenu';
+import { FloatingTimerWidget } from './timerWidget';
 
 class EpicPenApp {
   private canvasEngine: DrawingCanvas;
@@ -14,12 +16,18 @@ class EpicPenApp {
   private spotlight: SpotlightEngine;
   private magnifier: MagnifierLens;
   private settings: SettingsManager;
+  private pieMenu: PieMenu;
+  private timerWidget: FloatingTimerWidget;
 
   private isPassThroughMode: boolean = false;
-  private isCollapsed: boolean = false;
-  private isDocked: boolean = false;
+  private isCollapsed: boolean = true;
+  private isDocked: boolean = true;
+  private isPinned: boolean = false;
   private isHoldModeActive: boolean = false;
   private boardState: 'transparent' | 'white' | 'black' = 'transparent';
+
+  private lastMouseX: number = window.innerWidth / 2;
+  private lastMouseY: number = window.innerHeight / 2;
 
   // Elementos da Interface
   private toolbar: HTMLElement;
@@ -39,6 +47,8 @@ class EpicPenApp {
   private toolRulerBtn: HTMLButtonElement;
   private toolTextBtn: HTMLButtonElement;
   private toolEraserBtn: HTMLButtonElement;
+  private toolTimerBtn: HTMLButtonElement;
+  private autoShapeToggleBtn: HTMLButtonElement;
 
   private spotlightControls: HTMLElement;
   private spotlightOpacitySlider: HTMLInputElement;
@@ -91,8 +101,11 @@ class EpicPenApp {
     this.spotlight = new SpotlightEngine();
     this.magnifier = new MagnifierLens();
     this.settings = new SettingsManager();
+    this.pieMenu = new PieMenu();
+    this.timerWidget = new FloatingTimerWidget();
 
     this.canvasEngine.setRuler(this.ruler);
+    this.canvasEngine.setPieMenu(this.pieMenu);
     this.magnifier.setSourceCanvas(this.canvasEngine.getCanvas());
 
     this.toolbar = document.getElementById('toolbar') as HTMLElement;
@@ -113,6 +126,8 @@ class EpicPenApp {
     this.toolRulerBtn = document.getElementById('toolRuler') as HTMLButtonElement;
     this.toolTextBtn = document.getElementById('toolText') as HTMLButtonElement;
     this.toolEraserBtn = document.getElementById('toolEraser') as HTMLButtonElement;
+    this.toolTimerBtn = document.getElementById('toolTimer') as HTMLButtonElement;
+    this.autoShapeToggleBtn = document.getElementById('autoShapeToggleBtn') as HTMLButtonElement;
 
     this.spotlightControls = document.getElementById('spotlightControls') as HTMLElement;
     this.spotlightOpacitySlider = document.getElementById('spotlightOpacitySlider') as HTMLInputElement;
@@ -153,17 +168,15 @@ class EpicPenApp {
     this.initUIEvents();
     this.initHotkeys();
     this.initTauriGlobalEvents();
+    this.dockToEdge('right');
+    this.setCollapsedState(true);
     this.updatePassThroughState();
   }
 
   private initTauriGlobalEvents() {
     listen('global-toggle-draw', () => {
       this.isHoldModeActive = false;
-      if (this.isCollapsed) {
-        this.toggleCollapse();
-      }
-      this.setPassThroughMode(false);
-      this.showModeHud('MODO DESENHO', '✏️', 'Ativado via Atalho Global Ctrl+Alt+D');
+      this.setPassThroughMode(!this.isPassThroughMode);
     }).catch(err => {
       console.warn('Erro ao escutar evento global do Tauri:', err);
     });
@@ -236,6 +249,55 @@ class EpicPenApp {
     this.toolTextBtn.addEventListener('click', () => this.selectTool('text', this.toolTextBtn));
     this.toolEraserBtn.addEventListener('click', () => this.selectTool('eraser', this.toolEraserBtn));
 
+    // Temporizador & Cronômetro Flutuante
+    this.toolTimerBtn.addEventListener('click', () => {
+      this.timerWidget.toggle();
+      this.toolTimerBtn.classList.toggle('active', this.timerWidget.active);
+    });
+
+    // Toggle Reconhecimento Automático de Formas
+    this.autoShapeToggleBtn.addEventListener('click', () => {
+      this.canvasEngine.autoShapeEnabled = !this.canvasEngine.autoShapeEnabled;
+      this.autoShapeToggleBtn.classList.toggle('active', this.canvasEngine.autoShapeEnabled);
+      this.showToast('✨', this.canvasEngine.autoShapeEnabled ? 'Reconhecimento Automático de Formas Ativado!' : 'Modo Traço Livre Ativado!');
+    });
+
+    // Callbacks do Menu Radial (Pie Menu)
+    this.pieMenu.onSelectTool = (tool) => {
+      let targetBtn = this.toolPenBtn;
+      if (tool === 'highlighter') targetBtn = this.toolHighlighterBtn;
+      else if (tool === 'laser') targetBtn = this.toolLaserBtn;
+      else if (tool === 'eraser') targetBtn = this.toolEraserBtn;
+      else if (tool === 'shape') targetBtn = this.shapesBtn;
+      this.selectTool(tool, targetBtn);
+      this.showToast('🛠️', `Ferramenta: ${tool.toUpperCase()}`);
+    };
+
+    this.pieMenu.onSelectColor = (color) => {
+      this.selectColor(color);
+      this.showToast('🎨', 'Cor alterada via Menu Radial!');
+    };
+
+    this.pieMenu.onAction = (actionId) => {
+      if (actionId === 'spotlight') {
+        this.spotlight.toggle();
+        this.toolSpotlightBtn.classList.toggle('active', this.spotlight.active);
+      } else if (actionId === 'magnifier') {
+        this.setIgnoreMouse(false);
+        this.magnifier.toggle().then(() => this.updatePassThroughState());
+        this.toolMagnifierBtn.classList.toggle('active', this.magnifier.active);
+      } else if (actionId === 'ruler') {
+        this.toggleRuler();
+      }
+    };
+
+    // Botão Direito no Canvas abre o Menu Radial
+    const drawCanvas = this.canvasEngine.getCanvas();
+    drawCanvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.pieMenu.open(e.clientX, e.clientY);
+    });
+
     // Abrir pasta de capturas
     this.openFolderBtn.addEventListener('click', () => {
       try {
@@ -275,17 +337,15 @@ class EpicPenApp {
     // Swatches de Cores
     document.querySelectorAll('.color-swatch').forEach((swatch) => {
       swatch.addEventListener('click', (e) => {
-        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
         const target = e.currentTarget as HTMLElement;
-        target.classList.add('active');
         const color = target.getAttribute('data-color')!;
-        this.canvasEngine.currentColor = color;
+        this.selectColor(color);
       });
     });
 
     this.customColorPicker.addEventListener('input', (e) => {
       const color = (e.target as HTMLInputElement).value;
-      this.canvasEngine.currentColor = color;
+      this.selectColor(color);
     });
 
     // Presets de Espessura
@@ -341,6 +401,9 @@ class EpicPenApp {
     });
 
     window.addEventListener('mousemove', (e) => {
+      this.lastMouseX = e.clientX;
+      this.lastMouseY = e.clientY;
+
       // Detecção dinâmica de mouse sobre a aba da gaveta lateral mesmo durante o modo pass-through!
       if (this.isPassThroughMode) {
         const toolbarRect = this.toolbar.getBoundingClientRect();
@@ -383,24 +446,11 @@ class EpicPenApp {
       this.isDraggingToolbar = false;
     });
 
-    // Clique na Toolbar Minimizada / Aba Lateral: Re-ativa o Modo Desenho e Expande!
-    this.toolbar.addEventListener('click', () => {
-      if (this.isCollapsed) {
-        this.toggleCollapse();
-      }
-      if (this.isPassThroughMode) {
-        this.setPassThroughMode(false);
-      }
-    });
-
-    // Hover Expand/Collapse no Modo Gaveta Lateral Acoplada
+    // Hover Expand/Collapse no Modo Gaveta Lateral Acoplada (apenas quando não fixada!)
     this.toolbar.addEventListener('mouseenter', () => {
       this.setIgnoreMouse(false);
-      if (this.isDocked && this.isCollapsed) {
-        this.toggleCollapse();
-        if (this.isPassThroughMode) {
-          this.setPassThroughMode(false);
-        }
+      if (this.isDocked && !this.isPinned && this.isCollapsed) {
+        this.setCollapsedState(false);
       }
     });
 
@@ -408,8 +458,8 @@ class EpicPenApp {
       if (this.isPassThroughMode) {
         this.setIgnoreMouse(true);
       }
-      if (this.isDocked && !this.isCollapsed) {
-        this.toggleCollapse();
+      if (this.isDocked && !this.isPinned && !this.isCollapsed) {
+        this.setCollapsedState(true);
       }
     });
 
@@ -441,22 +491,35 @@ class EpicPenApp {
   }
 
   private toggleDockDrawer() {
-    this.isDocked = !this.isDocked;
-    if (this.isDocked) {
-      this.dockToEdge('right');
-      if (!this.isCollapsed) this.toggleCollapse();
-      this.showToast('📌', 'Gaveta Lateral Acoplada!');
+    this.isPinned = !this.isPinned;
+    if (this.isPinned) {
+      this.dockBtn.classList.add('active');
+      this.setCollapsedState(false);
+      this.showToast('📌', 'Barra Fixada na tela! (Não irá minimizar)');
     } else {
-      this.toolbar.classList.remove('docked-right', 'docked-left');
       this.dockBtn.classList.remove('active');
-      if (this.isCollapsed) this.toggleCollapse();
-      this.showToast('📌', 'Modo Flutuante Ativado!');
+      this.setCollapsedState(true);
+      this.showToast('📌', 'Modo Gaveta Retrátil ativado! (Minimiza ao tirar o mouse)');
     }
+  }
+
+  private setCollapsedState(collapsed: boolean) {
+    this.isCollapsed = collapsed;
+    this.toolbar.classList.toggle('collapsed', collapsed);
+    this.toggleCollapseBtn.innerText = collapsed ? '+' : '−';
+  }
+
+  private toggleCollapse() {
+    this.setCollapsedState(!this.isCollapsed);
   }
 
   private dockToEdge(side: 'left' | 'right') {
     this.isDocked = true;
-    this.dockBtn.classList.add('active');
+    if (this.isPinned) {
+      this.dockBtn.classList.add('active');
+    } else {
+      this.dockBtn.classList.remove('active');
+    }
     if (side === 'right') {
       this.toolbar.classList.add('docked-right');
       this.toolbar.classList.remove('docked-left');
@@ -479,6 +542,26 @@ class EpicPenApp {
 
     if (this.isPassThroughMode) {
       this.setPassThroughMode(false);
+    }
+  }
+
+  private selectColor(color: string) {
+    this.canvasEngine.currentColor = color;
+    this.customColorPicker.value = color;
+
+    let foundSwatch = false;
+    document.querySelectorAll('.color-swatch').forEach((swatch) => {
+      const swatchColor = swatch.getAttribute('data-color');
+      if (swatchColor?.toLowerCase() === color.toLowerCase()) {
+        swatch.classList.add('active');
+        foundSwatch = true;
+      } else {
+        swatch.classList.remove('active');
+      }
+    });
+
+    if (!foundSwatch) {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
     }
   }
 
@@ -537,12 +620,6 @@ class EpicPenApp {
     this.boardBlackBtn.classList.toggle('active', mode === 'black');
   }
 
-  private toggleCollapse() {
-    this.isCollapsed = !this.isCollapsed;
-    this.toolbar.classList.toggle('collapsed', this.isCollapsed);
-    this.toggleCollapseBtn.innerText = this.isCollapsed ? '+' : '−';
-  }
-
   private async handleScreenshot() {
     this.showToast('📸', 'Capturando tela com anotações...');
     const savedPath = await this.recorder.takeScreenshot();
@@ -570,14 +647,25 @@ class EpicPenApp {
   }
 
   private initHotkeys() {
-    // Tecla Mestra Hold-To-Toggle (Segurar APENAS Ctrl ou Espaço para alternar temporariamente!)
     window.addEventListener('keydown', (e) => {
       if (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') {
         return;
       }
 
-      // Suporte Bidirecional a Hold-to-Interact & Hold-to-Draw (APENAS Ctrl ou Espaço para não conflitar com Alt+D!)
-      if ((e.key === 'Control' || e.key === ' ') && !this.isHoldModeActive) {
+      // Atalho Ctrl + Espaço para acionar o Menu Radial sob o cursor!
+      if (e.ctrlKey && (e.code === 'Space' || e.key === ' ')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.isHoldModeActive = false;
+        if (this.isPassThroughMode) {
+          this.setPassThroughMode(false);
+        }
+        this.pieMenu.toggle(this.lastMouseX, this.lastMouseY);
+        return;
+      }
+
+      // Segurar a tecla Espaço isolada (sem Ctrl/Alt) para alternar temporariamente o modo (Hold-to-Toggle)
+      if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.shiftKey && !this.isHoldModeActive) {
         this.isHoldModeActive = true;
         this.setPassThroughMode(!this.isPassThroughMode, false);
         return;
@@ -591,7 +679,16 @@ class EpicPenApp {
         this.isHoldModeActive = false;
       }
 
-      if (pressedCombo === hotkeys.drawMode.toUpperCase()) {
+      if (pressedCombo === 'ALT+D') {
+        return; // Ignorar expressamente Alt+D conforme solicitado pelo usuário
+      }
+
+      if (
+        pressedCombo === hotkeys.drawMode.toUpperCase() ||
+        pressedCombo === 'CTRL+ALT+D' ||
+        pressedCombo === 'CTRL+ALT+DELETE' ||
+        pressedCombo === 'CTRL+ALT+DEL'
+      ) {
         e.preventDefault();
         this.setPassThroughMode(!this.isPassThroughMode);
       } else if (pressedCombo === hotkeys.clearCanvas.toUpperCase()) {
@@ -633,9 +730,9 @@ class EpicPenApp {
       }
     });
 
-    // Soltar Tecla Mestra para Reverter o Modo Original
+    // Soltar a tecla Espaço para reverter ao modo original
     window.addEventListener('keyup', (e) => {
-      if ((e.key === 'Control' || e.key === ' ') && this.isHoldModeActive) {
+      if (e.key === ' ' && this.isHoldModeActive) {
         this.isHoldModeActive = false;
         // Reverter ao modo original!
         this.setPassThroughMode(!this.isPassThroughMode, false);

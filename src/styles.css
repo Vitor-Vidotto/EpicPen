@@ -1134,3 +1134,304 @@ html, body {
   from { opacity: 0; transform: translate(-50%, 20px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ==========================================================================
+   ESTILOS DO MENU RADIAL (PIE MENU SOB O CURSOR)
+   ========================================================================== */
+.pie-menu {
+  position: fixed;
+  z-index: 10000;
+  width: 300px;
+  height: 300px;
+  margin-left: -150px;
+  margin-top: -150px;
+  border-radius: 50%;
+  pointer-events: auto;
+  user-select: none;
+  background: rgba(14, 14, 24, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px dashed rgba(0, 240, 255, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 240, 255, 0.15);
+}
+
+.pie-center-btn {
+  position: absolute;
+  top: 126px;
+  left: 126px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(18, 18, 28, 0.9);
+  border: 2px solid var(--accent-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 10005;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.pie-center-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 49, 49, 0.4);
+  border-color: var(--accent-red);
+}
+
+.pie-item {
+  position: absolute;
+  top: 128px;
+  left: 128px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(22, 22, 34, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  z-index: 10002;
+  pointer-events: auto;
+}
+
+.pie-item .pie-icon {
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.pie-item .pie-tooltip {
+  position: absolute;
+  bottom: -22px;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.pie-item:hover .pie-tooltip,
+.pie-item.active .pie-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pie-item:hover,
+.pie-item.active {
+  transform: scale(1.25) !important;
+  background: rgba(0, 240, 255, 0.35);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.7);
+  z-index: 10010;
+}
+
+/* ==========================================================================
+   ESTILOS DO TEMPORIZADOR & CRONÔMETRO FLUTUANTE
+   ========================================================================== */
+.timer-widget {
+  position: fixed;
+  top: 80px;
+  left: calc(50% - 110px);
+  z-index: 450;
+  width: 220px;
+  background: rgba(18, 18, 28, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.15);
+  border-radius: 16px;
+  padding: 10px;
+  user-select: none;
+  pointer-events: auto;
+  transition: border-color 0.3s;
+}
+
+.timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.timer-mode-group {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.timer-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.timer-mode-btn.active {
+  background: var(--accent-cyan);
+  color: #000;
+}
+
+.timer-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.timer-close-btn:hover {
+  color: var(--accent-red);
+  background: rgba(255, 49, 49, 0.2);
+}
+
+.timer-display {
+  font-family: 'Inter', monospace;
+  font-size: 38px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+  letter-spacing: 2px;
+  margin: 6px 0 10px 0;
+  transition: color 0.3s;
+}
+
+.timer-display.timer-alert {
+  color: var(--accent-red);
+  text-shadow: 0 0 20px rgba(255, 49, 49, 0.9);
+  animation: timerPulse 0.5s infinite alternate;
+}
+
+@keyframes timerPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.06); }
+}
+
+.timer-presets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.preset-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--accent-cyan);
+}
+
+.timer-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.timer-action-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.timer-action-btn.primary {
+  background: var(--accent-cyan);
+  color: #000;
+}
+
+.timer-action-btn.primary:hover {
+  background: #66F4FF;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.timer-action-btn.primary.active {
+  background: #FFBD59;
+  color: #000;
+}
+
+.timer-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.timer-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ==========================================================================
+   ESTILOS DO AUTO-SHAPE TOGGLE
+   ========================================================================== */
+.shapes-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shapes-row .shapes-container {
+  flex: 1;
+}
+
+.auto-shape-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.auto-shape-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.auto-shape-btn.active {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(181, 95, 230, 0.25));
+  border-color: var(--accent-cyan);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}

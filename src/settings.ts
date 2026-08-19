@@ -11,7 +11,7 @@ export interface HotkeyConfig {
 }
 
 export const DEFAULT_HOTKEYS: HotkeyConfig = {
-  drawMode: 'Alt+D',
+  drawMode: 'Ctrl+Alt+D',
   clearCanvas: 'Alt+C',
   toggleRuler: 'Alt+R',
   takeScreenshot: 'Alt+S',
@@ -62,7 +62,11 @@ export class SettingsManager {
     try {
       const saved = localStorage.getItem('epic_pen_hotkeys');
       if (saved) {
-        return { ...DEFAULT_HOTKEYS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.drawMode === 'Alt+D' || parsed.drawMode === 'ALT+D') {
+          parsed.drawMode = 'Ctrl+Alt+D';
+        }
+        return { ...DEFAULT_HOTKEYS, ...parsed };
       }
     } catch (e) {
       console.warn('Erro ao carregar atalhos:', e);

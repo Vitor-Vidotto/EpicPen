@@ -1,4 +1,6 @@
 import { RulerTool } from './ruler';
+import { AutoShapeDetector } from './autoShape';
+import type { PieMenu } from './pieMenu';
 
 export type ToolType = 'pen' | 'highlighter' | 'laser' | 'ruler' | 'text' | 'eraser' | 'shape' | 'badge' | 'crop';
 export type ShapeType = 'arrow' | 'line' | 'rect' | 'circle';
@@ -23,12 +25,14 @@ export class DrawingCanvas {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private rulerRef: RulerTool | null = null;
+  private pieMenuRef: PieMenu | null = null;
   
   public currentTool: ToolType = 'pen';
   public currentShape: ShapeType = 'arrow';
   public currentColor: string = '#FFDE59';
   public currentSize: number = 7;
   public badgeCount: number = 1;
+  public autoShapeEnabled: boolean = false;
 
   private isDrawing: boolean = false;
   private currentPoints: Point[] = [];
@@ -58,6 +62,10 @@ export class DrawingCanvas {
     this.rulerRef = ruler;
   }
 
+  public setPieMenu(pieMenu: PieMenu) {
+    this.pieMenuRef = pieMenu;
+  }
+
   public resizeCanvas() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
@@ -80,6 +88,10 @@ export class DrawingCanvas {
   }
 
   private handlePointerDown(e: MouseEvent) {
+    if (this.pieMenuRef && this.pieMenuRef.active()) {
+      return;
+    }
+
     let pt: Point = { x: e.clientX, y: e.clientY };
 
     if (this.rulerRef && this.rulerRef.active) {
@@ -206,6 +218,24 @@ export class DrawingCanvas {
     this.isDrawing = false;
 
     if (this.currentPoints.length > 0 && this.currentTool !== 'eraser' && this.currentTool !== 'laser' && this.currentTool !== 'crop') {
+      if (this.currentTool === 'pen' && this.autoShapeEnabled) {
+        const recognized = AutoShapeDetector.detect(this.currentPoints);
+        if (recognized) {
+          const stroke: Stroke = {
+            tool: 'shape',
+            shapeType: recognized.shapeType,
+            color: this.currentColor,
+            size: this.currentSize,
+            points: [recognized.start, recognized.end]
+          };
+          this.strokes.push(stroke);
+          this.undoStack = [];
+          this.currentPoints = [];
+          this.redrawAll();
+          return;
+        }
+      }
+
       const stroke: Stroke = {
         tool: this.currentTool,
         shapeType: this.currentShape,

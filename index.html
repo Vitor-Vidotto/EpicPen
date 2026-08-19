@@ -65,6 +65,31 @@
     <button id="openFolderBtn" class="toast-btn hidden" title="Abrir pasta de capturas no Explorer">📁 Abrir Pasta</button>
   </div>
 
+  <!-- Menu Radial sob o Cursor (Pie Menu) -->
+  <div id="pieMenu" class="pie-menu hidden"></div>
+
+  <!-- Widget Flutuante de Temporizador & Cronômetro -->
+  <div id="timerWidget" class="timer-widget hidden">
+    <div id="timerHeader" class="timer-header" title="Arraste para mover o temporizador">
+      <div class="drag-handle">⋮⋮</div>
+      <div class="timer-mode-group">
+        <button id="timerModeTimer" class="timer-mode-btn active">Timer</button>
+        <button id="timerModeStopwatch" class="timer-mode-btn">Cronômetro</button>
+      </div>
+      <button id="timerCloseBtn" class="timer-close-btn" title="Fechar Temporizador">✖</button>
+    </div>
+    <div id="timerDisplay" class="timer-display">05:00</div>
+    <div id="timerPresets" class="timer-presets">
+      <button id="timerSub1mBtn" class="preset-btn" title="Subtrair 1 minuto">-1m</button>
+      <button id="timerAdd1mBtn" class="preset-btn" title="Adicionar 1 minuto">+1m</button>
+      <button id="timerAdd5mBtn" class="preset-btn" title="Adicionar 5 minutos">+5m</button>
+    </div>
+    <div class="timer-actions">
+      <button id="timerStartBtn" class="timer-action-btn primary"><span>▶</span> Iniciar</button>
+      <button id="timerResetBtn" class="timer-action-btn secondary"><span>🔄</span> Reset</button>
+    </div>
+  </div>
+
   <!-- Modal de Configurações & Customização de Atalhos -->
   <div id="settingsModal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -78,7 +103,7 @@
         <div class="settings-grid">
           <div class="setting-item">
             <label for="hk_drawMode">Modo Desenho / Interativo</label>
-            <input type="text" id="hk_drawMode" value="Alt+D" />
+            <input type="text" id="hk_drawMode" value="Ctrl+Alt+D" />
           </div>
           <div class="setting-item">
             <label for="hk_clearCanvas">Limpar Tela</label>
@@ -199,6 +224,10 @@
         <button id="toolEraser" class="tool-btn" title="Borracha">
           <span class="tool-icon">🧹</span>
         </button>
+
+        <button id="toolTimer" class="tool-btn" title="Temporizador & Cronômetro Flutuante">
+          <span class="tool-icon">⏱️</span>
+        </button>
       </div>
 
       <!-- Submenu do Holofote (Ajustes de Opacidade e Raio) -->
@@ -222,19 +251,25 @@
         </button>
       </div>
 
-      <!-- Dropdown de Formas Geométricas -->
-      <div class="shapes-container">
-        <button id="shapesBtn" class="tool-btn-wide" title="Formas Geométricas">
-          <span id="currentShapeIcon">↗️</span>
-          <span class="tool-text">Formas</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <div id="shapesDropdown" class="shapes-dropdown hidden">
-          <button data-shape="arrow" class="shape-opt active">↗️ Seta</button>
-          <button data-shape="line" class="shape-opt">── Linha</button>
-          <button data-shape="rect" class="shape-opt">▭ Retângulo</button>
-          <button data-shape="circle" class="shape-opt">◯ Círculo</button>
+      <!-- Dropdown de Formas Geométricas & Auto-Forma -->
+      <div class="shapes-row">
+        <div class="shapes-container">
+          <button id="shapesBtn" class="tool-btn-wide" title="Formas Geométricas">
+            <span id="currentShapeIcon">↗️</span>
+            <span class="tool-text">Formas</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div id="shapesDropdown" class="shapes-dropdown hidden">
+            <button data-shape="arrow" class="shape-opt active">↗️ Seta</button>
+            <button data-shape="line" class="shape-opt">── Linha</button>
+            <button data-shape="rect" class="shape-opt">▭ Retângulo</button>
+            <button data-shape="circle" class="shape-opt">◯ Círculo</button>
+          </div>
         </div>
+
+        <button id="autoShapeToggleBtn" class="auto-shape-btn" title="Ativar/Desativar Reconhecimento Automático de Formas">
+          ✨ Auto-Forma
+        </button>
       </div>
 
       <div class="divider"></div>
